@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Email Spam Detection Using Machine Learning & Naive Bayes</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <style>
+    /* Smooth scrolling and nav styling */
+    html { scroll-behavior: smooth; }
+    .nav-links { display: flex; gap: 16px; align-items: center; }
+    .nav-links a { color: var(--neutral-muted); text-decoration: none; font-size: 0.88rem; font-weight: 500; transition: color 0.15s ease; }
+    .nav-links a:hover { color: var(--primary); }
+    .table-container { overflow-x: auto; margin-top: 14px; border-radius: var(--radius); border: 1px solid var(--neutral-border); }
+    .formula-card { background: #f8fafc; border: 1px solid var(--neutral-border); border-radius: var(--radius); padding: 18px; margin: 16px 0; font-family: "Courier New", Courier, monospace; font-size: 0.95rem; line-height: 1.6; color: #1e293b; }
+    .cm-table { width: 100%; border-collapse: collapse; margin-top: 14px; text-align: center; font-size: 0.9rem; }
+    .cm-table th, .cm-table td { border: 1px solid var(--neutral-border); padding: 10px; }
+    .cm-table th { background: #f1f5f9; color: var(--neutral-heading); }
+    .cm-highlight { font-weight: 700; color: var(--primary); }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navigation Header -->
+  <header class="app-header">
+    <div class="container header-inner">
+      <div class="brand">
+        <div class="brand-icon">✉</div>
+        <div class="brand-text">
+          <h1>SpamGuard ML</h1>
+          <p>Email & SMS Spam Detection using Naive Bayes</p>
+        </div>
+      </div>
+      <nav class="nav-links">
+        <a href="#demo">Live Classifier</a>
+        <a href="#workflow">ML Workflow</a>
+        <a href="#dataset">Dataset & Preprocessing</a>
+        <a href="#eda">EDA Visualizations</a>
+        <a href="#evaluation">Evaluation & Metrics</a>
+        <a href="#algorithm">Naive Bayes Theory</a>
+      </nav>
+      <div class="header-badges">
+        <span class="badge">B.Tech IT Mini-Project</span>
+        <span class="badge badge-success">Model Active</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <section class="hero container">
+    <h2 class="hero-title">Email Spam Detection System</h2>
+    <p class="hero-subtitle">
+      A complete, reproducible Machine Learning workflow powered by <strong>Multinomial Naive Bayes</strong> 
+      and the real <strong>UCI SMS Spam Collection</strong> dataset. Accurately identifies spam with 98.35% test accuracy.
+    </p>
+  </section>
+
+  <!-- Section 1: Live Message Prediction Form -->
+  <section id="demo" class="section container prediction-section">
+    <div class="prediction-grid">
+      
+      <!-- Input Card -->
+      <div class="card">
+        <h3 class="section-title">
+          <span>🔍</span> Classify a Message
+        </h3>
+        <p class="section-desc">Type or paste any email subject or message text to predict its category.</p>
+
+        <!-- Sample Buttons for Quick Demonstration -->
+        <div class="form-group">
+          <label class="form-label">Sample Test Cases (Click to load):</label>
+          <div class="sample-buttons">
+            <button type="button" class="sample-btn" onclick="loadSample('spam1')">🚨 Spam: Free Prize</button>
+            <button type="button" class="sample-btn" onclick="loadSample('spam2')">🚨 Spam: Urgent Award</button>
+            <button type="button" class="sample-btn" onclick="loadSample('ham1')">✅ Ham: College Study</button>
+            <button type="button" class="sample-btn" onclick="loadSample('ham2')">✅ Ham: Family Chat</button>
+          </div>
+        </div>
+
+        {% if error_message %}
+          <div class="alert alert-error">
+            <span>⚠️</span>
+            <div>{{ error_message }}</div>
+          </div>
+        {% endif %}
+
+        <form method="POST" action="/#demo" id="predictionForm">
+          <div class="form-group">
+            <label for="messageInput" class="form-label">Message Content:</label>
+            <textarea 
+              id="messageInput" 
+              name="message" 
+              class="message-textarea" 
+              placeholder="e.g. Congratulations! You have won a $1,000 Walmart Gift Card. Click here to claim your reward now..."
+              required
+            >{{ input_message }}</textarea>
+          </div>
+
+          <div class="btn-row">
+            <button type="submit" class="btn btn-primary">
+              <span>⚡</span> Predict Message
+            </button>
+            <button type="button" class="btn btn-secondary" onclick="clearMessageForm()">
+              <span>↺</span> Clear
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Result Card -->
+      <div class="card result-card">
+        {% if prediction_result %}
+          <div class="result-badge-wrap">
+            <span class="result-pill {% if prediction_result.is_spam %}pill-spam{% else %}pill-ham{% endif %}">
+              {% if prediction_result.is_spam %}🚨 SPAM DETECTED{% else %}✅ NOT SPAM (HAM){% endif %}
+            </span>
+          </div>
+
+          <div class="prob-meter-group">
+            <div class="prob-header">
+              <span>Spam Probability</span>
+              <strong style="color: var(--spam-color);">{{ prediction_result.spam_probability }}%</strong>
+            </div>
+            <div class="prob-bar-track">
+              <div class="prob-bar-fill prob-fill-spam" style="width: {{ prediction_result.spam_probability }}%;"></div>
+            </div>
+          </div>
+
+          <div class="prob-meter-group">
+            <div class="prob-header">
+              <span>Ham (Legitimate) Probability</span>
+              <strong style="color: var(--ham-color);">{{ prediction_result.ham_probability }}%</strong>
+            </div>
+            <div class="prob-bar-track">
+              <div class="prob-bar-fill prob-fill-ham" style="width: {{ prediction_result.ham_probability }}%;"></div>
+            </div>
+          </div>
+
+          <p class="result-note">
+            * Probabilities are model-estimated posteriors calculated using Scikit-learn's MultinomialNB predict_proba() 
+            after Laplace smoothing, not absolute certainty.
+          </p>
+
+        {% else %}
+          <div class="result-empty">
+            <div class="result-empty-icon">📬</div>
+            <h4 style="color: var(--neutral-heading); margin-bottom: 6px;">Ready for Prediction</h4>
+            <p style="font-size: 0.88rem;">
+              Enter text or pick a sample on the left, then click <strong>"Predict Message"</strong> to classify.
+            </p>
+          </div>
+        {% endif %}
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Section 2: Complete 10-Step ML Workflow -->
+  <section id="workflow" class="section container">
+    <h3 class="section-title">
+      <span>⚙️</span> Complete Machine Learning Workflow
+    </h3>
+    <p class="section-desc">The structured end-to-end data science lifecycle followed in this college mini-project.</p>
+
+    <div class="workflow-grid">
+      <div class="step-card">
+        <span class="step-number">1</span>
+        <h4 class="step-title">Problem Definition</h4>
+        <p class="step-desc">Binary text classification to segregate incoming messages into Spam and Ham (Legitimate).</p>
+      </div>
+
+      <div class="step-card">
+        <span class="step-number">2</span>
+        <h4 class="step-title">Dataset Collection</h4>
+        <p class="step-desc">Loaded real-world benchmark SMS Spam Collection dataset from the UCI Machine Learning Repository.</p>
+      </div>
+
+      <div class="step-card">
+        <span class="step-number">3</span>
+        <h4 class="step-title">Data Preprocessing</h4>
+        <p class="step-desc">Standardized columns, cleaned whitespace, removed duplicate records, and normalized labels.</p>
+      </div>
+
+      <div class="step-card">
+        <span class="step-number">4</span>
+        <h4 class="step-title">Exploratory Data Analysis</h4>
+        <p class="step-desc">Analyzed class balance, character distributions, and unigram word frequencies with Seaborn.</p>
+      </div>
+
+      <div class="step-card">
+        <span class="step-number">5</span>
+        <h4 class="step-title">Feature Extraction</h4>
+        <p class="step-desc">Compared CountVectorizer vs TF-IDF; converted raw strings to tokenized numerical count matrices.</p>
+      </div>
+
+      <div class="step-card">
+        <span class="step-number">6</span>
+        <h4 class="step-title">Train-Test Split</h4>
+        <p class="step-desc">Stratified 80/20 train-test partition (4,126 train / 1,032 test) preserving label distribution.</p>
+      </div>
+
+      <div class="step-card">
+        <span class="step-number">7</span>
+        <h4 class="step-title">Model Training</h4>
+        <p class="step-desc">Trained Scikit-learn Multinomial Naive Bayes pipeline with Laplace smoothing (&alpha; = 1.0).</p>
+      </div>
+
+      <div class="step-card">
+        <span class="step-number">8</span>
+        <h4 class="step-title">Model Evaluation</h4>
+        <p class="step-desc">Evaluated test metrics (Accuracy, Precision, Recall, F1) and generated confusion matrix heatmap.</p>
+      </div>
+
+      <div class="step-card">
+        <span class="step-number">9</span>
+        <h4 class="step-title">Model Serialization</h4>
+        <p class="step-desc">Persisted complete fitted pipeline to <code>spam_detection_model.pkl</code> using Joblib.</p>
+      </div>
+
+      <div class="step-card">
+        <span class="step-number">10</span>
+        <h4 class="step-title">Inference & UI</h4>
+        <p class="step-desc">Integrated pipeline into Flask web application for instantaneous local predictions.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 3: Dataset Collection & Preprocessing Summary -->
+  <section id="dataset" class="section container">
+    <h3 class="section-title">
+      <span>📊</span> Dataset Collection & Preprocessing Summary
+    </h3>
+    <p class="section-desc">Summary of real dataset attributes after cleaning and standardization.</p>
+
+    {% if eval_data %}
+    <div class="metrics-grid">
+      <div class="metric-card">
+        <div class="metric-title">Cleaned Samples</div>
+        <div class="metric-value">{{ eval_data.dataset_summary.total_samples }}</div>
+        <div class="metric-desc">Standardized text records</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-title">Ham Messages</div>
+        <div class="metric-value" style="color: var(--ham-color);">{{ eval_data.dataset_summary.ham_count }}</div>
+        <div class="metric-desc">{{ eval_data.dataset_summary.ham_percentage }}% legitimate</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-title">Spam Messages</div>
+        <div class="metric-value" style="color: var(--spam-color);">{{ eval_data.dataset_summary.spam_count }}</div>
+        <div class="metric-desc">{{ eval_data.dataset_summary.spam_percentage }}% spam</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-title">Train / Test Split</div>
+        <div class="metric-value">{{ eval_data.split_summary.train_size }} / {{ eval_data.split_summary.test_size }}</div>
+        <div class="metric-desc">80% Train &bull; 20% Held-Out Test</div>
+      </div>
+    </div>
+
+    <!-- First 5 Samples Table -->
+    <div class="card" style="margin-top: 18px;">
+      <h4 style="color: var(--neutral-heading); font-size: 1rem; margin-bottom: 8px;">
+        Dataset Sample Preview (First 5 Rows from <code>data/spam.csv</code>)
+      </h4>
+      <div class="table-container">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th style="width: 100px;">Label</th>
+              <th>Message Content</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in eval_data.dataset_summary.first_five_samples %}
+            <tr>
+              <td>
+                <span class="badge {% if row.label == 'spam' %}pill-spam{% else %}pill-ham{% endif %}" style="padding: 2px 8px; font-size: 0.75rem;">
+                  {{ row.label|upper }}
+                </span>
+              </td>
+              <td>{{ row.message }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% endif %}
+  </section>
+
+  <!-- Section 4: Exploratory Data Analysis (EDA) Gallery -->
+  <section id="eda" class="section container">
+    <h3 class="section-title">
+      <span>📈</span> Exploratory Data Analysis (EDA) Visualizations
+    </h3>
+    <p class="section-desc">Visual insights generated directly from the real dataset using Matplotlib and Seaborn.</p>
+
+    <div class="plots-grid">
+      <!-- Plot 1 -->
+      <div class="plot-card">
+        <div class="plot-header">
+          <h4 class="plot-title">1. Spam vs Ham Distribution</h4>
+        </div>
+        <div class="plot-body">
+          <img src="{{ url_for('static', filename='plots/spam_ham_distribution.png') }}" alt="Spam vs Ham Distribution" class="plot-img">
+        </div>
+        <div class="plot-caption">
+          <strong>Insight:</strong> Demonstrates high class imbalance (87.55% Ham vs 12.45% Spam). Stratified train-test splitting is essential to preserve this ratio across subsets.
+        </div>
+      </div>
+
+      <!-- Plot 2 -->
+      <div class="plot-card">
+        <div class="plot-header">
+          <h4 class="plot-title">2. Message Length Distribution</h4>
+        </div>
+        <div class="plot-body">
+          <img src="{{ url_for('static', filename='plots/message_length_distribution.png') }}" alt="Message Length Distribution" class="plot-img">
+        </div>
+        <div class="plot-caption">
+          <strong>Insight:</strong> Overall character lengths show a bimodal curve, with a tall primary peak around 40-80 characters and a secondary peak near 150 characters.
+        </div>
+      </div>
+
+      <!-- Plot 3 -->
+      <div class="plot-card">
+        <div class="plot-header">
+          <h4 class="plot-title">3. Message Length Comparison</h4>
+        </div>
+        <div class="plot-body">
+          <img src="{{ url_for('static', filename='plots/message_length_comparison.png') }}" alt="Message Length Comparison" class="plot-img">
+        </div>
+        <div class="plot-caption">
+          <strong>Insight:</strong> Spam messages have an average length of 137.4 chars (clustering around the 160-char SMS limit), whereas Ham messages average only 70.9 chars.
+        </div>
+      </div>
+
+      <!-- Plot 4 -->
+      <div class="plot-card">
+        <div class="plot-header">
+          <h4 class="plot-title">4. Frequent Words in Spam</h4>
+        </div>
+        <div class="plot-body">
+          <img src="{{ url_for('static', filename='plots/frequent_spam_words.png') }}" alt="Frequent Spam Words" class="plot-img">
+        </div>
+        <div class="plot-caption">
+          <strong>Insight:</strong> Spam messages heavily feature commercial and urgency tokens like <em>'free'</em>, <em>'txt'</em>, <em>'claim'</em>, <em>'prize'</em>, <em>'call'</em>, and <em>'win'</em>.
+        </div>
+      </div>
+
+      <!-- Plot 5 -->
+      <div class="plot-card">
+        <div class="plot-header">
+          <h4 class="plot-title">5. Frequent Words in Ham</h4>
+        </div>
+        <div class="plot-body">
+          <img src="{{ url_for('static', filename='plots/frequent_ham_words.png') }}" alt="Frequent Ham Words" class="plot-img">
+        </div>
+        <div class="plot-caption">
+          <strong>Insight:</strong> Legitimate messages contain daily conversational keywords such as <em>'ok'</em>, <em>'will'</em>, <em>'come'</em>, <em>'got'</em>, <em>'good'</em>, <em>'day'</em>, and <em>'love'</em>.
+        </div>
+      </div>
+
+      <!-- Plot 6 -->
+      <div class="plot-card">
+        <div class="plot-header">
+          <h4 class="plot-title">6. Confusion Matrix on Test Set</h4>
+        </div>
+        <div class="plot-body">
+          <img src="{{ url_for('static', filename='plots/confusion_matrix.png') }}" alt="Confusion Matrix Heatmap" class="plot-img">
+        </div>
+        <div class="plot-caption">
+          <strong>Insight:</strong> Model achieves 899 True Negatives and 116 True Positives on 1,032 test samples, maintaining very low False Positives (5) and False Negatives (12).
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 5: Model Performance & Evaluation Metrics -->
+  <section id="evaluation" class="section container">
+    <h3 class="section-title">
+      <span>🎯</span> Model Evaluation & Performance
+    </h3>
+    <p class="section-desc">Evaluated strictly on the held-out 20% test dataset (1,032 messages) with <strong>Spam</strong> as the positive class.</p>
+
+    {% if eval_data %}
+    <div class="metrics-grid">
+      <div class="metric-card">
+        <div class="metric-title">Test Accuracy</div>
+        <div class="metric-value">{{ (eval_data.metrics.accuracy * 100)|round(2) }}%</div>
+        <div class="metric-desc">Overall percentage of correct predictions</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-title">Spam Precision</div>
+        <div class="metric-value">{{ (eval_data.metrics.precision_spam * 100)|round(2) }}%</div>
+        <div class="metric-desc">Messages flagged as spam that were actually spam</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-title">Spam Recall</div>
+        <div class="metric-value">{{ (eval_data.metrics.recall_spam * 100)|round(2) }}%</div>
+        <div class="metric-desc">Percentage of actual spam correctly caught</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-title">Spam F1-Score</div>
+        <div class="metric-value">{{ (eval_data.metrics.f1_spam * 100)|round(2) }}%</div>
+        <div class="metric-desc">Harmonic mean of precision and recall</div>
+      </div>
+    </div>
+
+    <!-- Error Analysis: False Positives vs False Negatives -->
+    <div class="card" style="margin-top: 20px;">
+      <h4 style="color: var(--neutral-heading); margin-bottom: 8px;">
+        Critical Error Analysis: False Positives vs False Negatives
+      </h4>
+      <p style="font-size: 0.9rem; margin-bottom: 14px;">
+        In real-world email filtering, the business and user impact of misclassification errors is asymmetric:
+      </p>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+        <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: var(--radius); padding: 14px;">
+          <h5 style="color: var(--spam-color); font-size: 0.92rem; margin-bottom: 4px;">
+            False Positives (FP = {{ eval_data.confusion_matrix.fp }})
+          </h5>
+          <p style="font-size: 0.82rem; color: #7f1d1d;">
+            <strong>High Cost:</strong> A legitimate message (e.g. job offer, exam notification, bank alert) is mistakenly routed to the Spam folder. Our model keeps this extremely low (only 5 out of 904 legitimate test messages).
+          </p>
+        </div>
+
+        <div style="background: #fffbeb; border: 1px solid #fef3c7; border-radius: var(--radius); padding: 14px;">
+          <h5 style="color: #b45309; font-size: 0.92rem; margin-bottom: 4px;">
+            False Negatives (FN = {{ eval_data.confusion_matrix.fn }})
+          </h5>
+          <p style="font-size: 0.82rem; color: #78350f;">
+            <strong>Mild Inconvenience:</strong> A spam message slips through into the inbox. While annoying, users can manually delete it without losing vital correspondence.
+          </p>
+        </div>
+      </div>
+
+      <!-- Feature Extractor Comparison Note -->
+      <div class="info-box" style="margin-top: 16px;">
+        <h4>Feature Extractor 5-Fold Cross Validation Comparison:</h4>
+        <p>
+          On training data: <strong>CountVectorizer</strong> achieved Macro F1 of <strong>{{ eval_data.cv_comparison.count_vectorizer_f1 }}</strong>, 
+          outperforming <strong>TfidfVectorizer</strong> (<strong>{{ eval_data.cv_comparison.tfidf_vectorizer_f1 }}</strong>). 
+          Hence, CountVectorizer was selected for the final deployed pipeline.
+        </p>
+      </div>
+    </div>
+    {% endif %}
+  </section>
+
+  <!-- Section 6: Algorithm Deep Dive: Naive Bayes -->
+  <section id="algorithm" class="section container">
+    <h3 class="section-title">
+      <span>📐</span> Algorithm Deep Dive: Multinomial Naive Bayes
+    </h3>
+    <p class="section-desc">The theoretical foundation of the probabilistic classification algorithm implemented in this project.</p>
+
+    <div class="card">
+      <h4 style="color: var(--neutral-heading); margin-bottom: 8px;">Bayes' Theorem for Text Classification</h4>
+      <p style="font-size: 0.9rem; margin-bottom: 12px;">
+        Bayes' theorem calculates the posterior probability of a class (Spam or Ham) given the observed message tokens 
+        <strong>w = (w<sub>1</sub>, w<sub>2</sub>, ..., w<sub>n</sub>)</strong>:
+      </p>
+
+      <div class="formula-card">
+        P(Class | w) = [ P(Class) &times; &prod; P(w<sub>i</sub> | Class) ] / P(w)
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-top: 16px;">
+        <div class="info-box">
+          <h4>The "Naive" Independence Assumption</h4>
+          <p>
+            The algorithm assumes that the presence of any given word in a message is conditionally independent 
+            of every other word given the class label. Even though language syntax naturally has dependencies, 
+            this simplification makes computation fast and performs remarkably well on bag-of-words text data.
+          </p>
+        </div>
+
+        <div class="info-box">
+          <h4>Laplace (Additive) Smoothing (&alpha; = 1.0)</h4>
+          <p>
+            If an incoming message contains a rare word never seen in the training data, its conditional probability 
+            would be zero without smoothing. Multiplying by zero would zero out the entire product. 
+            Laplace smoothing adds a pseudo-count of 1 to all vocabulary word counts to prevent this problem.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="app-footer">
+    <div class="container">
+      <p><strong>Email Spam Detection Using Machine Learning and Naive Bayes</strong></p>
+      <p>B.Tech Information Technology &bull; Machine Learning Mini Project &bull; Local Flask Demonstration</p>
+      <p style="margin-top: 8px; font-size: 0.78rem;">Built with Scikit-learn, Pandas, Matplotlib, Seaborn, Joblib &amp; Flask</p>
+    </div>
+  </footer>
+
+  <!-- Client-side Interactive JavaScript -->
+  <script>
+    const samples = {
+      spam1: "Congratulations! You have won a free $1,000 Walmart Gift Card. Claim now by calling 0800123456 or visit http://claim-prize.example.com!",
+      spam2: "URGENT! Your mobile number was awarded £1,000 cash balance. Claim code 7789. Call 09061701461 to collect your prize immediately.",
+      ham1: "Hi, are you coming to college tomorrow? Let's finish the database and machine learning lab assignments together.",
+      ham2: "Hey dad, can you pick me up from the train station around 6 pm after my classes finish?"
+    };
+
+    function loadSample(key) {
+      const textarea = document.getElementById('messageInput');
+      if (samples[key]) {
+        textarea.value = samples[key];
+        textarea.focus();
+      }
+    }
+
+    function clearMessageForm() {
+      const textarea = document.getElementById('messageInput');
+      textarea.value = '';
+      textarea.focus();
+    }
+  </script>
+
+</body>
+</html>

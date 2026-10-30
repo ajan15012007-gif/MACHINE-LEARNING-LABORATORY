@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  body {
+    background-color: #181818;
+    color: #cccccc;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    margin: 0;
+    padding: 20px;
+    font-size: 13px;
+  }
+  .explorer {
+    width: 320px;
+    background: #1f1f1f;
+    border: 1px solid #2b2b2b;
+    border-radius: 6px;
+    padding: 12px 16px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+  }
+  .header {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: #999999;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .folder-title {
+    font-weight: 600;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 8px;
+  }
+  .tree-node {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 3px 0;
+    color: #cccccc;
+  }
+  .indent-1 { padding-left: 18px; }
+  .indent-2 { padding-left: 36px; }
+  .folder-icon { color: #dcb67a; font-size: 14px; }
+  .file-icon-py { color: #519aba; font-size: 13px; }
+  .file-icon-md { color: #42a5f5; font-size: 13px; }
+  .file-icon-txt { color: #8bc34a; font-size: 13px; }
+  .file-icon-json { color: #cbcb41; font-size: 13px; }
+  .file-icon-csv { color: #4caf50; font-size: 13px; }
+  .file-icon-pkl { color: #ff9800; font-size: 13px; }
+  .file-icon-img { color: #ab47bc; font-size: 13px; }
+  .file-icon-html { color: #e44d26; font-size: 13px; }
+  .file-icon-css { color: #29b6f6; font-size: 13px; }
+</style>
+</head>
+<body>
+  <div class="explorer">
+    <div class="header">Explorer</div>
+    <div class="folder-title">▼ EmailSpamDetection</div>
+    <div class="tree-node indent-1"><span class="folder-icon">▼</span> <span class="folder-icon">📁</span> data</div>
+    <div class="tree-node indent-2"><span class="file-icon-csv">📄</span> sms.tsv</div>
+    <div class="tree-node indent-2"><span class="file-icon-csv">📄</span> spam.csv</div>
+    <div class="tree-node indent-1"><span class="folder-icon">▼</span> <span class="folder-icon">📁</span> documentation</div>
+    <div class="tree-node indent-2"><span class="folder-icon">📁</span> screenshots</div>
+    <div class="tree-node indent-1"><span class="folder-icon">▼</span> <span class="folder-icon">📁</span> models</div>
+    <div class="tree-node indent-2"><span class="file-icon-json">📄</span> evaluation_results.json</div>
+    <div class="tree-node indent-2"><span class="file-icon-pkl">📦</span> spam_detection_model.pkl</div>
+    <div class="tree-node indent-1"><span class="folder-icon">▼</span> <span class="folder-icon">📁</span> static</div>
+    <div class="tree-node indent-2"><span class="folder-icon">📁</span> plots (6 graphs)</div>
+    <div class="tree-node indent-2"><span class="file-icon-css">🎨</span> style.css</div>
+    <div class="tree-node indent-1"><span class="folder-icon">▼</span> <span class="folder-icon">📁</span> templates</div>
+    <div class="tree-node indent-2"><span class="file-icon-html">🌐</span> index.html</div>
+    <div class="tree-node indent-1"><span class="file-icon-py">🐍</span> app.py</div>
+    <div class="tree-node indent-1"><span class="file-icon-md">📝</span> README.md</div>
+    <div class="tree-node indent-1"><span class="file-icon-txt">📋</span> requirements.txt</div>
+    <div class="tree-node indent-1"><span class="file-icon-py">🐍</span> train_model.py</div>
+  </div>
+</body>
+</html>
